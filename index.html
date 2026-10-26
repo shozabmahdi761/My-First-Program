@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Age Calculator</title>
+<meta name="description" content="Find your exact age on any date, or the age difference between two people.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAEEF7; --card:#FFFFFF; --ink:#13203F; --muted:#5A6684; --line:#D5DBEA;
+    --cobalt:#2748F5; --lemon:#FFD93D; --err:#B42318;
+    --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+    --body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;min-height:100vh;background:var(--paper);color:var(--ink);font:400 16px/1.5 var(--body);
+    display:flex;justify-content:center;padding:clamp(16px,4vw,48px) 16px}
+  main{width:100%;max-width:620px}
+  h1{font:800 clamp(2rem,6vw,2.75rem)/1.05 var(--display);letter-spacing:-.02em;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 24px}
+
+  .tabs{display:grid;grid-template-columns:1fr 1fr;background:#DCE2F2;border-radius:12px;padding:4px;margin-bottom:16px}
+  .tabs button{border:0;background:transparent;font:500 .95rem var(--body);color:var(--muted);padding:10px;border-radius:9px;cursor:pointer}
+  .tabs button[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(19,32,63,.18)}
+
+  .form{background:var(--card);border-radius:16px;padding:20px;display:grid;gap:16px;border:1px solid var(--line)}
+  .field label{display:block;font-weight:700;font-size:.9rem;margin-bottom:6px}
+  .row{display:flex;gap:8px}
+  input[type=date]{flex:1;min-width:0;font:500 1rem var(--body);color:var(--ink);background:#F6F8FD;border:1.5px solid var(--line);
+    border-radius:10px;padding:12px 14px;height:48px}
+  input[type=date]:focus-visible,button:focus-visible{outline:3px solid var(--cobalt);outline-offset:2px}
+  .ghost{border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:700 .9rem var(--body);border-radius:10px;padding:0 14px;height:48px;cursor:pointer;white-space:nowrap}
+  .ghost:hover{border-color:var(--cobalt);color:var(--cobalt)}
+  .hint{font-size:.85rem;color:var(--muted);margin:6px 0 0}
+  [hidden]{display:none!important}
+
+  .result{margin-top:16px;background:var(--ink);color:#fff;border-radius:20px;padding:clamp(20px,5vw,32px);overflow:hidden}
+  .result .lead{color:#AFC0EE;margin:0 0 4px;font-size:.95rem}
+  .big{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .big .num{font:800 clamp(5rem,26vw,9rem)/.9 var(--display);letter-spacing:-.04em;color:var(--lemon)}
+  .big .unit{font:500 1.5rem var(--display)}
+  .detail{font:500 1.15rem var(--display);margin:10px 0 0}
+
+  .ruler-wrap{margin-top:26px}
+  .ruler{position:relative;height:28px;border-radius:6px;background:
+    repeating-linear-gradient(90deg,transparent 0,transparent calc(8.3333% - 2px),rgba(255,255,255,.28) calc(8.3333% - 2px),rgba(255,255,255,.28) 8.3333%),#243762;overflow:hidden}
+  .fill{position:absolute;inset:0 auto 0 0;width:0;background:var(--cobalt);transition:width .6s ease}
+  .ruler-labels{display:flex;justify-content:space-between;gap:12px;font-size:.85rem;color:#AFC0EE;margin-top:8px}
+  .ruler-caption{margin:10px 0 0;font-weight:500}
+
+  dl{margin:24px 0 0;display:grid;grid-template-columns:1fr auto;border-top:1px solid rgba(255,255,255,.18)}
+  dt,dd{margin:0;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.18)}
+  dt{color:#AFC0EE}
+  dd{font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+  .error{margin-top:16px;background:#FDECEA;color:var(--err);border-radius:12px;padding:14px 16px;font-weight:500}
+  footer{margin-top:20px;color:var(--muted);font-size:.85rem;text-align:center}
+  @media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Age calculator</h1>
+  <p class="sub">Enter a date of birth to see an exact age on any day.</p>
+
+  <div class="tabs" role="tablist" aria-label="Calculator mode">
+    <button role="tab" id="tab-age" aria-selected="true" aria-controls="panel">My age</button>
+    <button role="tab" id="tab-diff" aria-selected="false" aria-controls="panel">Age difference</button>
+  </div>
+
+  <section class="form" id="panel" role="tabpanel">
+    <div class="field">
+      <label for="dob" id="lbl-a">Date of birth</label>
+      <input type="date" id="dob" min="1900-01-01" autocomplete="bday">
+    </div>
+    <div class="field">
+      <label for="asof" id="lbl-b">Age on this date</label>
+      <div class="row">
+        <input type="date" id="asof" min="1900-01-01">
+        <button type="button" class="ghost" id="today">Use today</button>
+      </div>
+      <p class="hint" id="hint">Starts as today’s date. Change it to see your age on any other day.</p>
+    </div>
+  </section>
+
+  <div id="error" class="error" role="alert" hidden></div>
+
+  <section class="result" id="result" aria-live="polite" hidden>
+    <p class="lead" id="lead"></p>
+    <div class="big"><span class="num" id="years">0</span><span class="unit" id="unit">years</span></div>
+    <p class="detail" id="detail"></p>
+
+    <div class="ruler-wrap" id="rulerWrap">
+      <div class="ruler" role="img" aria-label="Progress through the current year of age"><div class="fill" id="fill"></div></div>
+      <div class="ruler-labels"><span id="lastB"></span><span id="nextB"></span></div>
+      <p class="ruler-caption" id="caption"></p>
+    </div>
+
+    <dl id="stats"></dl>
+  </section>
+
+  <footer>Calculated in your browser. Nothing is stored or sent anywhere.</footer>
+</main>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,'0');
+  const iso = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const parse = s => { const p = s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); };
+  const dim = (y,m) => new Date(y,m+1,0).getDate();
+  const plural = (n,w) => n.toLocaleString()+' '+w+(n===1?'':'s');
+  const fmt = d => d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+  const utc = d => Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+  const days = (a,b) => Math.round((utc(b)-utc(a))/864e5);
+
+  function diff(a,b){
+    let y=b.getFullYear()-a.getFullYear(), m=b.getMonth()-a.getMonth(), d=b.getDate()-a.getDate();
+    if(d<0){ m--; const pm=b.getMonth()-1; d+=dim(pm<0?b.getFullYear()-1:b.getFullYear(),(pm+12)%12); }
+    if(m<0){ y--; m+=12; }
+    return {y,m,d};
+  }
+  function birthdayIn(year,dob){
+    const m=dob.getMonth(), d=dob.getDate();
+    return (m===1&&d===29&&dim(year,1)===28) ? new Date(year,2,1) : new Date(year,m,d);
+  }
+
+  let mode='age';
+  const dob=$('dob'), asof=$('asof');
+
+  function setMode(next){
+    mode=next;
+    $('tab-age').setAttribute('aria-selected',next==='age');
+    $('tab-diff').setAttribute('aria-selected',next==='diff');
+    if(next==='age'){
+      $('lbl-a').textContent='Date of birth';
+      $('lbl-b').textContent='Age on this date';
+      $('today').hidden=false;
+      $('hint').textContent='Starts as today’s date. Change it to see your age on any other day.';
+      asof.value=iso(new Date());
+    }else{
+      $('lbl-a').textContent='First person’s date of birth';
+      $('lbl-b').textContent='Second person’s date of birth';
+      $('today').hidden=true;
+      $('hint').textContent='The result is the gap between the two birth dates.';
+      asof.value='';
+    }
+    calc();
+  }
+
+  function showError(msg){
+    $('error').textContent=msg; $('error').hidden=false; $('result').hidden=true;
+  }
+
+  function stat(rows){
+    $('stats').innerHTML='';
+    rows.forEach(r=>{
+      const dt=document.createElement('dt'), dd=document.createElement('dd');
+      dt.textContent=r[0]; dd.textContent=r[1];
+      $('stats').append(dt,dd);
+    });
+  }
+
+  function calc(){
+    $('error').hidden=true;
+    if(!dob.value||!asof.value){ $('result').hidden=true; return; }
+    const a=parse(dob.value), b=parse(asof.value);
+
+    if(mode==='age'){
+      if(a>b){ showError('That date of birth is after the “age on” date. Pick a birth date that comes first.'); return; }
+      const d=diff(a,b), total=days(a,b);
+      $('lead').textContent='On '+fmt(b)+' you are';
+      $('years').textContent=d.y;
+      $('unit').textContent=d.y===1?'year old':'years old';
+      $('detail').textContent=plural(d.m,'month')+' and '+plural(d.d,'day');
+
+      let next=birthdayIn(b.getFullYear(),a);
+      if(next<b) next=birthdayIn(b.getFullYear()+1,a);
+      const last = next.getTime()===b.getTime() ? b : birthdayIn(next.getFullYear()-1,a);
+      const left=days(b,next), span=days(last,next);
+      const pct = left===0 ? 100 : Math.max(0,Math.min(100,(days(last,b)/span)*100));
+      $('rulerWrap').hidden=false;
+      $('fill').style.width=pct+'%';
+      $('lastB').textContent=left===0?'':fmt(last);
+      $('nextB').textContent=fmt(next);
+      $('caption').textContent = left===0 ? 'That day is a birthday.' : plural(left,'day')+' until the next birthday';
+
+      stat([
+        ['Born on a',a.toLocaleDateString(undefined,{weekday:'long'})],
+        ['Total months',(d.y*12+d.m).toLocaleString()],
+        ['Total weeks',Math.floor(total/7).toLocaleString()],
+        ['Total days',total.toLocaleString()],
+        ['Total hours',(total*24).toLocaleString()]
+      ]);
+    }else{
+      const older=a<=b?a:b, younger=a<=b?b:a;
+      const d=diff(older,younger), total=days(older,younger);
+      $('lead').textContent = total===0 ? 'Same birth date' : (a<b?'The first person is older by':'The second person is older by');
+      $('years').textContent=d.y;
+      $('unit').textContent=d.y===1?'year':'years';
+      $('detail').textContent=plural(d.m,'month')+' and '+plural(d.d,'day');
+      $('rulerWrap').hidden=true;
+      stat([
+        ['Older person born',fmt(older)],
+        ['Younger person born',fmt(younger)],
+        ['Total months',(d.y*12+d.m).toLocaleString()],
+        ['Total weeks',Math.floor(total/7).toLocaleString()],
+        ['Total days',total.toLocaleString()]
+      ]);
+    }
+    $('result').hidden=false;
+  }
+
+  $('tab-age').addEventListener('click',()=>setMode('age'));
+  $('tab-diff').addEventListener('click',()=>setMode('diff'));
+  $('today').addEventListener('click',()=>{ asof.value=iso(new Date()); calc(); });
+  dob.addEventListener('input',calc);
+  asof.addEventListener('input',calc);
+
+  asof.value=iso(new Date());
+})();
+</script>
+</body>
+</html>
